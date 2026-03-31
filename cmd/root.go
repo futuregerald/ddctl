@@ -8,6 +8,7 @@ import (
 	"github.com/futuregerald/ddctl/cmd/dashboard"
 	"github.com/futuregerald/ddctl/cmd/db"
 	"github.com/futuregerald/ddctl/cmd/logs"
+	mcpcmd "github.com/futuregerald/ddctl/cmd/mcp"
 	"github.com/futuregerald/ddctl/cmd/metrics"
 	"github.com/futuregerald/ddctl/cmd/monitor"
 	"github.com/futuregerald/ddctl/cmd/slo"
@@ -46,4 +47,6 @@ func init() {
 	rootCmd.AddCommand(logs.Cmd)
 	rootCmd.AddCommand(api.Cmd)
 	rootCmd.AddCommand(db.Cmd)
+	mcpcmd.Version = Version
+	rootCmd.AddCommand(mcpcmd.Cmd)
 }
