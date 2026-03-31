@@ -1,0 +1,16 @@
+name: "Service Availability SLO"
+type: "monitor"
+description: "Tracks the percentage of time the service is available and responding without errors, based on monitor uptime."
+monitor_ids:
+  - 12345678
+thresholds:
+  - target: 99.9
+    timeframe: "30d"
+    warning: 99.95
+  - target: 99.5
+    timeframe: "90d"
+tags:
+  - "managed_by:ddctl"
+  - "service:my-service"
+  - "team:platform"
+  - "tier:critical"

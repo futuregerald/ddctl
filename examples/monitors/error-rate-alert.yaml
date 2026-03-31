@@ -1,0 +1,25 @@
+name: "High Error Rate Alert"
+type: "query alert"
+query: "avg(last_5m):sum:trace.http.request.errors{service:my-service}.as_count() / sum:trace.http.request.hits{service:my-service}.as_count() * 100 > 5"
+message: |
+  Error rate for {{service.name}} is above {{threshold}}% over the last 5 minutes.
+
+  Current value: {{value}}%
+
+  Please investigate the service logs and recent deployments.
+
+  @slack-engineering-alerts @pagerduty-oncall
+tags:
+  - "managed_by:ddctl"
+  - "service:my-service"
+  - "team:platform"
+priority: 2
+options:
+  thresholds:
+    critical: 5
+    warning: 2
+  notify_no_data: false
+  renotify_interval: 60
+  evaluation_delay: 60
+  include_tags: true
+  new_group_delay: 60
