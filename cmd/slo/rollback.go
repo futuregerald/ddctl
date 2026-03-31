@@ -3,7 +3,6 @@ package slo
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/futuregerald/ddctl/cmd/cmdutil"
 	"github.com/spf13/cobra"
@@ -16,8 +15,6 @@ var rollbackCmd = &cobra.Command{
 	Short: "Rollback to a previous version (local only)",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		sloID := args[0]
-
 		if rollbackFlagToVersion <= 0 {
 			return fmt.Errorf("--to-version is required")
 		}
@@ -28,18 +25,7 @@ var rollbackCmd = &cobra.Command{
 		}
 		defer deps.Close()
 
-		targetVersion, err := deps.Store.GetVersion(sloID, "slo", deps.ConnName, rollbackFlagToVersion)
-		if err != nil {
-			return err
-		}
-
-		msg := fmt.Sprintf("rollback to version %d", rollbackFlagToVersion)
-		if err := deps.Store.SaveVersion(sloID, "slo", deps.ConnName, targetVersion.Content, "", "", msg); err != nil {
-			return err
-		}
-
-		fmt.Fprintf(os.Stderr, "Rolled back to version %d. Run 'ddctl slo push %s' to apply remotely.\n", rollbackFlagToVersion, sloID)
-		return nil
+		return cmdutil.RollbackResource(deps, args[0], "slo", rollbackFlagToVersion)
 	},
 }
 

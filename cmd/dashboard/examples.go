@@ -51,20 +51,12 @@ With a name argument, use --preview to see the YAML or --import to import into l
 			deps, err := cmdutil.InitDeps(cmd, false)
 			if err != nil {
 				// For listing examples, we can work without a connection
-				format := "table"
-				switch format {
-				case "json":
-					output.JSON(os.Stdout, items)
-				case "yaml":
-					output.YAML(os.Stdout, items)
-				default:
-					headers := []string{"NAME", "FILE"}
-					var rows [][]string
-					for _, item := range items {
-						rows = append(rows, []string{item.Name, item.File})
-					}
-					output.Table(os.Stdout, headers, rows)
+				headers := []string{"NAME", "FILE"}
+				var rows [][]string
+				for _, item := range items {
+					rows = append(rows, []string{item.Name, item.File})
 				}
+				output.Table(os.Stdout, headers, rows)
 				return nil
 			}
 			defer deps.Close()
@@ -114,7 +106,9 @@ With a name argument, use --preview to see the YAML or --import to import into l
 			var meta struct {
 				Title string `yaml:"title"`
 			}
-			yaml.Unmarshal(data, &meta)
+			if err := yaml.Unmarshal(data, &meta); err != nil {
+				return fmt.Errorf("parsing example metadata: %w", err)
+			}
 			title := meta.Title
 			if title == "" {
 				title = name

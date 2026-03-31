@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/futuregerald/ddctl/internal/client"
@@ -15,6 +16,7 @@ import (
 	"github.com/futuregerald/ddctl/internal/keyring"
 	"github.com/futuregerald/ddctl/internal/store"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 // Deps holds the initialized dependencies for a command.
@@ -159,4 +161,81 @@ func StripExtension(name string) string {
 	name = strings.TrimSuffix(name, ".yaml")
 	name = strings.TrimSuffix(name, ".yml")
 	return name
+}
+
+// EditResource opens a resource in the user's editor, validates the YAML, and saves a new version.
+func EditResource(deps *Deps, resourceID, resourceType string) error {
+	version, err := deps.Store.GetLatestVersion(resourceID, resourceType, deps.ConnName)
+	if err != nil {
+		return err
+	}
+
+	tmpFile := filepath.Join(os.TempDir(), fmt.Sprintf("ddctl-%s-%s.yaml", resourceType, resourceID))
+	if err := os.WriteFile(tmpFile, []byte(version.Content), 0600); err != nil {
+		return fmt.Errorf("writing temp file: %w", err)
+	}
+	defer os.Remove(tmpFile)
+
+	beforeHash := SHA256([]byte(version.Content))
+	if err := OpenEditor(deps.Config, tmpFile); err != nil {
+		return fmt.Errorf("editor: %w", err)
+	}
+
+	edited, err := os.ReadFile(tmpFile)
+	if err != nil {
+		return fmt.Errorf("reading edited file: %w", err)
+	}
+
+	if SHA256(edited) == beforeHash {
+		fmt.Fprintln(os.Stderr, "No changes.")
+		return nil
+	}
+
+	var check interface{}
+	if err := yaml.Unmarshal(edited, &check); err != nil {
+		return fmt.Errorf("invalid YAML: %w", err)
+	}
+
+	if err := deps.Store.SaveVersion(resourceID, resourceType, deps.ConnName, string(edited), "", "", "edited locally"); err != nil {
+		return fmt.Errorf("saving version: %w", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "Saved new local version. Run 'ddctl %s push %s' to apply remotely.\n", resourceType, resourceID)
+	return nil
+}
+
+// RollbackResource copies a previous version's content as a new version.
+func RollbackResource(deps *Deps, resourceID, resourceType string, toVersion int) error {
+	targetVersion, err := deps.Store.GetVersion(resourceID, resourceType, deps.ConnName, toVersion)
+	if err != nil {
+		return err
+	}
+
+	msg := fmt.Sprintf("rollback to version %d", toVersion)
+	if err := deps.Store.SaveVersion(resourceID, resourceType, deps.ConnName, targetVersion.Content, "", "", msg); err != nil {
+		return fmt.Errorf("saving rollback version: %w", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "Rolled back to version %d. Run 'ddctl %s push %s' to apply remotely.\n", toVersion, resourceType, resourceID)
+	return nil
+}
+
+// ExportResource exports a resource's latest content to a file or stdout.
+func ExportResource(deps *Deps, resourceID, resourceType, outputPath string) error {
+	version, err := deps.Store.GetLatestVersion(resourceID, resourceType, deps.ConnName)
+	if err != nil {
+		return err
+	}
+
+	if outputPath == "" {
+		fmt.Print(version.Content)
+		return nil
+	}
+
+	if err := os.WriteFile(outputPath, []byte(version.Content), 0644); err != nil {
+		return fmt.Errorf("writing file: %w", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "Exported %s %s to %s\n", resourceType, resourceID, outputPath)
+	return nil
 }

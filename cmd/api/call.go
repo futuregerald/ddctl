@@ -3,9 +3,6 @@ package api
 
 import (
 	"fmt"
-	"io"
-	"net/http"
-	"os"
 	"strings"
 
 	"github.com/futuregerald/ddctl/cmd/cmdutil"
@@ -63,47 +60,9 @@ var callCmd = &cobra.Command{
 			path = strings.Replace(path, "{metric}", callFlagID, 1)
 		}
 
-		// Get the site from the connection
-		conn, err := deps.Store.GetConnection(deps.ConnName)
-		if err != nil {
-			return err
-		}
-
-		url := fmt.Sprintf("https://api.%s%s", conn.Site, path)
-
-		var bodyReader io.Reader
-		if callFlagBody != "" {
-			if strings.HasPrefix(callFlagBody, "@") {
-				data, err := os.ReadFile(callFlagBody[1:])
-				if err != nil {
-					return fmt.Errorf("reading body file: %w", err)
-				}
-				bodyReader = strings.NewReader(string(data))
-			} else {
-				bodyReader = strings.NewReader(callFlagBody)
-			}
-		}
-
-		req, err := http.NewRequest(op.Method, url, bodyReader)
-		if err != nil {
-			return err
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		// Use the client's credentials
-		ctx := deps.Client.Context()
-		apiKeys, ok := ctx.Value(
-			apiKeysContextKey{},
-		).(map[string]interface{})
-		_ = apiKeys
-		_ = ok
-
-		// For simplicity, execute through the raw HTTP path
 		return executeRawRequest(deps, op.Method, path, callFlagBody)
 	},
 }
-
-type apiKeysContextKey struct{}
 
 func init() {
 	callCmd.Flags().StringVar(&callFlagID, "id", "", "Resource ID for operations that require one")
