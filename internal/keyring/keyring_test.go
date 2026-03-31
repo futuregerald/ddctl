@@ -2,7 +2,6 @@
 package keyring
 
 import (
-	"os"
 	"testing"
 )
 
@@ -42,11 +41,11 @@ func TestResolveCredentials_ConnectionSpecificEnvVars(t *testing.T) {
 }
 
 func TestResolveCredentials_NoCredentials(t *testing.T) {
-	// Clear any DD env vars
-	os.Unsetenv("DD_API_KEY")
-	os.Unsetenv("DD_APP_KEY")
-	os.Unsetenv("DD_PROD_API_KEY")
-	os.Unsetenv("DD_PROD_APP_KEY")
+	// Clear any DD env vars using t.Setenv for proper test isolation
+	t.Setenv("DD_API_KEY", "")
+	t.Setenv("DD_APP_KEY", "")
+	t.Setenv("DD_PROD_API_KEY", "")
+	t.Setenv("DD_PROD_APP_KEY", "")
 
 	_, _, err := ResolveCredentials("prod")
 	if err == nil {
@@ -62,6 +61,7 @@ func TestMaskKey(t *testing.T) {
 		{"abcdef1234567890", "••••••••••••7890"},
 		{"short", "••••••••••••hort"},
 		{"ab", "••••••••••••••ab"},
+		{"", "••••••••••••••"},
 	}
 
 	for _, tt := range tests {

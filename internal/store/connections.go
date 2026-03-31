@@ -3,6 +3,7 @@ package store
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -15,21 +16,28 @@ type Connection struct {
 }
 
 func (s *Store) AddConnection(name, site string) error {
-	// Check if this is the first connection
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Check if this is the first connection (within transaction to prevent TOCTOU race)
 	var count int
-	if err := s.db.QueryRow("SELECT count(*) FROM connections").Scan(&count); err != nil {
+	if err := tx.QueryRow("SELECT count(*) FROM connections").Scan(&count); err != nil {
 		return err
 	}
 	isDefault := count == 0
 
-	_, err := s.db.Exec(
+	_, err = tx.Exec(
 		"INSERT INTO connections (name, site, is_default) VALUES (?, ?, ?)",
 		name, site, isDefault,
 	)
 	if err != nil {
 		return fmt.Errorf("adding connection %q: %w", name, err)
 	}
-	return nil
+
+	return tx.Commit()
 }
 
 func (s *Store) GetConnection(name string) (*Connection, error) {
@@ -38,7 +46,7 @@ func (s *Store) GetConnection(name string) (*Connection, error) {
 		"SELECT name, site, is_default, created_at FROM connections WHERE name = ?",
 		name,
 	).Scan(&conn.Name, &conn.Site, &conn.IsDefault, &conn.CreatedAt)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("connection %q not found", name)
 	}
 	if err != nil {
@@ -52,7 +60,7 @@ func (s *Store) GetDefaultConnection() (*Connection, error) {
 	err := s.db.QueryRow(
 		"SELECT name, site, is_default, created_at FROM connections WHERE is_default = 1",
 	).Scan(&conn.Name, &conn.Site, &conn.IsDefault, &conn.CreatedAt)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("no default connection configured")
 	}
 	if err != nil {

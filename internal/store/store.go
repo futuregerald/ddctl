@@ -76,11 +76,22 @@ func (s *Store) migrate() error {
 			continue
 		}
 
-		if _, err := s.db.Exec(m); err != nil {
+		tx, err := s.db.Begin()
+		if err != nil {
+			return fmt.Errorf("starting transaction for migration %d: %w", version, err)
+		}
+
+		if _, err := tx.Exec(m); err != nil {
+			tx.Rollback()
 			return fmt.Errorf("migration %d: %w", version, err)
 		}
-		if _, err := s.db.Exec("INSERT INTO schema_migrations (version) VALUES (?)", version); err != nil {
+		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES (?)", version); err != nil {
+			tx.Rollback()
 			return fmt.Errorf("recording migration %d: %w", version, err)
+		}
+
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("committing migration %d: %w", version, err)
 		}
 	}
 

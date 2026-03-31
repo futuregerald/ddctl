@@ -47,7 +47,11 @@ func Dir() string {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 		return filepath.Join(xdg, "ddctl")
 	}
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		// Fall back to current directory if home cannot be determined
+		home = "."
+	}
 	return filepath.Join(home, ".config", "ddctl")
 }
 

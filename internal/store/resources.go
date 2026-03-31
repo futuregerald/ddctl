@@ -3,6 +3,7 @@ package store
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os/user"
 	"time"
@@ -79,9 +80,15 @@ func (s *Store) SaveVersion(resourceID, resourceType, connection, content, remot
 		}
 	}
 
-	// Get next version number
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Get next version number within the same transaction to prevent TOCTOU race
 	var maxVersion int
-	err := s.db.QueryRow(
+	err = tx.QueryRow(
 		`SELECT COALESCE(MAX(version), 0) FROM resource_versions
 		 WHERE resource_id = ? AND resource_type = ? AND connection = ?`,
 		resourceID, resourceType, connection,
@@ -90,12 +97,16 @@ func (s *Store) SaveVersion(resourceID, resourceType, connection, content, remot
 		return err
 	}
 
-	_, err = s.db.Exec(
+	_, err = tx.Exec(
 		`INSERT INTO resource_versions (resource_id, resource_type, connection, version, content, remote_snapshot, applied_by, message)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		resourceID, resourceType, connection, maxVersion+1, content, remoteSnapshot, appliedBy, message,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (s *Store) ListVersions(resourceID, resourceType, connection string) ([]ResourceVersion, error) {
@@ -140,7 +151,7 @@ func (s *Store) GetLatestVersion(resourceID, resourceType, connection string) (*
 		resourceID, resourceType, connection,
 	).Scan(&v.ID, &v.ResourceID, &v.ResourceType, &v.Connection,
 		&v.Version, &v.Content, &remoteSnapshot, &v.AppliedAt, &appliedBy, &message)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("no versions found for %s/%s", resourceType, resourceID)
 	}
 	if err != nil {
@@ -162,7 +173,7 @@ func (s *Store) GetVersion(resourceID, resourceType, connection string, version 
 		resourceID, resourceType, connection, version,
 	).Scan(&v.ID, &v.ResourceID, &v.ResourceType, &v.Connection,
 		&v.Version, &v.Content, &remoteSnapshot, &v.AppliedAt, &appliedBy, &msg)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("version %d not found for %s/%s", version, resourceType, resourceID)
 	}
 	if err != nil {

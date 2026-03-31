@@ -63,12 +63,19 @@ func StoreCredentials(connection string, creds *Credentials) error {
 }
 
 func DeleteCredentials(connection string) error {
-	_ = gokeyring.Delete(serviceName, connection+"/api_key")
-	_ = gokeyring.Delete(serviceName, connection+"/app_key")
+	if err := gokeyring.Delete(serviceName, connection+"/api_key"); err != nil {
+		return fmt.Errorf("deleting API key from keychain: %w", err)
+	}
+	if err := gokeyring.Delete(serviceName, connection+"/app_key"); err != nil {
+		return fmt.Errorf("deleting App key from keychain: %w", err)
+	}
 	return nil
 }
 
 func MaskKey(key string) string {
+	if len(key) == 0 {
+		return "••••••••••••••"
+	}
 	if len(key) <= 4 {
 		return "••••••••••••••" + key
 	}
