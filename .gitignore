@@ -1,0 +1,17 @@
+# Build output
+ddctl
+*.exe
+
+# OS files
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Database (local state)
+*.db
+*.db-wal
+*.db-shm
