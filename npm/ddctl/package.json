@@ -10,7 +10,7 @@
   "bin": {
     "ddctl": "bin/ddctl.js"
   },
-  "files": ["bin/ddctl.js"],
+  "files": ["bin/ddctl.js", "README.md"],
   "optionalDependencies": {
     "@ddctl/darwin-arm64": "0.0.0",
     "@ddctl/darwin-x64": "0.0.0",
