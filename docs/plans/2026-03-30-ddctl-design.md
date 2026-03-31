@@ -342,11 +342,28 @@ The database file is created with mode `0600` (owner-only read/write). The `cont
 
 The `schema_migrations` table tracks applied migrations. On every `ddctl` invocation, pending migrations are run automatically before any database operation. Migrations are embedded in the binary via Go's `embed` package.
 
-## Dashboard DSL
+## Resource Formats
 
-The simplified DSL covers common widget types. Anything the DSL doesn't model uses a `raw:` escape hatch.
+### Default: Raw API YAML
 
-### Example
+By default, `ddctl` uses YAML that maps 1:1 to the Datadog API JSON format. This means:
+- `ddctl dashboard pull` + `ddctl dashboard push` always round-trips perfectly — no translation loss
+- Any widget type, option, or field the API supports is available immediately
+- LLMs already know the Datadog API schema
+
+```bash
+ddctl dashboard export abc-123 -o dashboard.yaml          # raw format (default)
+ddctl dashboard export abc-123 -o dashboard.yaml --dsl     # simplified DSL format
+ddctl dashboard import -f dashboard.yaml                   # auto-detects format
+```
+
+### Optional: Simplified DSL
+
+The `--dsl` flag enables a simplified YAML format that covers common widget types with less boilerplate. Useful for creating dashboards from scratch or for human-readable definitions. The DSL is translated to/from the raw API format by `internal/dsl/`.
+
+Anything the DSL doesn't model uses a `raw:` escape hatch.
+
+### DSL Example
 
 ```yaml
 name: TPM Assignment Monitoring
@@ -536,6 +553,8 @@ The MCP server supports configurable safety levels to prevent destructive operat
 | `read-only` | Only read operations (list, search, query, diff, history). **Default.** |
 | `read-write` | Read + non-destructive writes (create, push, pull, edit). Delete and rollback require `confirm: true` parameter. |
 | `unrestricted` | All operations. Destructive operations still require `confirm: true` parameter. |
+
+The safety level defaults to `read-only` and is configured via the MCP server args — not overridable per-tool-call. This ensures the human who sets up the MCP config makes a deliberate choice about what the LLM agent is allowed to do.
 
 Even at `unrestricted`, destructive operations (delete, rollback, push to a resource modified by someone else) require the LLM to explicitly pass `confirm: true` in the tool call — an extra friction point that forces the LLM to make a deliberate choice rather than accidentally triggering a destructive action.
 
