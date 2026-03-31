@@ -1,0 +1,63 @@
+title: "Service Overview - Golden Signals"
+description: "Latency, throughput, errors, and saturation for a service"
+layout_type: ordered
+widgets:
+  - definition:
+      title: "Request Latency (p99)"
+      type: timeseries
+      requests:
+        - q: "avg:trace.http.request.duration.by.service.99p{service:my-service}"
+          display_type: line
+          style:
+            palette: dog_classic
+      yaxis:
+        include_zero: false
+    layout:
+      x: 0
+      y: 0
+      width: 6
+      height: 3
+  - definition:
+      title: "Request Throughput"
+      type: timeseries
+      requests:
+        - q: "sum:trace.http.request.hits{service:my-service}.as_rate()"
+          display_type: bars
+          style:
+            palette: cool
+      yaxis:
+        include_zero: true
+    layout:
+      x: 6
+      y: 0
+      width: 6
+      height: 3
+  - definition:
+      title: "Error Rate"
+      type: query_value
+      requests:
+        - q: "sum:trace.http.request.errors{service:my-service}.as_count() / sum:trace.http.request.hits{service:my-service}.as_count() * 100"
+          aggregator: avg
+      precision: 2
+      custom_unit: "%"
+    layout:
+      x: 0
+      y: 3
+      width: 4
+      height: 2
+  - definition:
+      title: "CPU Utilization"
+      type: timeseries
+      requests:
+        - q: "avg:system.cpu.user{service:my-service} by {host}"
+          display_type: line
+      yaxis:
+        max: "100"
+    layout:
+      x: 4
+      y: 3
+      width: 8
+      height: 3
+tags:
+  - "managed_by:ddctl"
+  - "template:service-overview"

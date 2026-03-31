@@ -1,0 +1,74 @@
+title: "Log Analytics"
+description: "Log volume, error patterns, and top sources"
+layout_type: ordered
+widgets:
+  - definition:
+      title: "Log Volume Over Time"
+      type: timeseries
+      requests:
+        - q: "count:logs{*}.as_count()"
+          display_type: bars
+          style:
+            palette: cool
+      time:
+        live_span: 4h
+    layout:
+      x: 0
+      y: 0
+      width: 12
+      height: 3
+  - definition:
+      title: "Error Logs"
+      type: timeseries
+      requests:
+        - q: "count:logs{status:error}.as_count()"
+          display_type: bars
+          style:
+            palette: warm
+      time:
+        live_span: 4h
+    layout:
+      x: 0
+      y: 3
+      width: 6
+      height: 3
+  - definition:
+      title: "Top Log Sources"
+      type: toplist
+      requests:
+        - q: "count:logs{*} by {source}.as_count()"
+      time:
+        live_span: 1h
+    layout:
+      x: 6
+      y: 3
+      width: 6
+      height: 3
+  - definition:
+      title: "Error Rate"
+      type: query_value
+      requests:
+        - q: "count:logs{status:error}.as_count() / count:logs{*}.as_count() * 100"
+          aggregator: avg
+      precision: 2
+      custom_unit: "%"
+    layout:
+      x: 0
+      y: 6
+      width: 4
+      height: 2
+  - definition:
+      title: "Log Patterns"
+      type: toplist
+      requests:
+        - q: "count:logs{status:error} by {service}.as_count()"
+      time:
+        live_span: 1h
+    layout:
+      x: 4
+      y: 6
+      width: 8
+      height: 3
+tags:
+  - "managed_by:ddctl"
+  - "template:log-analytics"
