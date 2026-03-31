@@ -42,13 +42,21 @@ var syncCmd = &cobra.Command{
 			}
 
 			var raw interface{}
-			json.Unmarshal(jsonBytes, &raw)
+			if err := json.Unmarshal(jsonBytes, &raw); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to parse %s: %v\n", r.ResourceID, err)
+				failed++
+				continue
+			}
 			yamlBytes, _ := yaml.Marshal(raw)
 
 			var meta struct {
 				Title string `json:"title"`
 			}
-			json.Unmarshal(jsonBytes, &meta)
+			if err := json.Unmarshal(jsonBytes, &meta); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to parse metadata for %s: %v\n", r.ResourceID, err)
+				failed++
+				continue
+			}
 			if meta.Title != "" {
 				deps.Store.TrackResource(r.ResourceID, "dashboard", deps.ConnName, meta.Title)
 			}

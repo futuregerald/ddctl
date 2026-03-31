@@ -50,7 +50,9 @@ var pushCmd = &cobra.Command{
 			ModifiedAt string `json:"modified_at"`
 			AuthorName string `json:"author_name"`
 		}
-		json.Unmarshal(snapshotA, &remoteMeta)
+		if err := json.Unmarshal(snapshotA, &remoteMeta); err != nil {
+			return fmt.Errorf("parsing remote metadata: %w", err)
+		}
 
 		fmt.Fprintf(os.Stderr, "Dashboard: %s (%s)\n", dashID, remoteMeta.Title)
 		if remoteMeta.ModifiedAt != "" {
@@ -95,7 +97,9 @@ var pushCmd = &cobra.Command{
 
 		// Save remote snapshot
 		var rawRemote interface{}
-		json.Unmarshal(snapshotB, &rawRemote)
+		if err := json.Unmarshal(snapshotB, &rawRemote); err != nil {
+			return fmt.Errorf("parsing remote snapshot: %w", err)
+		}
 		snapshotYAML, _ := yaml.Marshal(rawRemote)
 		deps.Store.SaveVersion(dashID, "dashboard", deps.ConnName, localVersion.Content, string(snapshotYAML), "", "pushed to remote")
 

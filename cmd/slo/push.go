@@ -38,7 +38,9 @@ var pushCmd = &cobra.Command{
 		var meta struct {
 			Name string `json:"name"`
 		}
-		json.Unmarshal(snapshotA, &meta)
+		if err := json.Unmarshal(snapshotA, &meta); err != nil {
+			return fmt.Errorf("parsing remote metadata: %w", err)
+		}
 
 		fmt.Fprintf(os.Stderr, "SLO: %s (%s)\n", sloID, meta.Name)
 
@@ -56,7 +58,9 @@ var pushCmd = &cobra.Command{
 		}
 
 		var localData interface{}
-		yaml.Unmarshal([]byte(localVersion.Content), &localData)
+		if err := yaml.Unmarshal([]byte(localVersion.Content), &localData); err != nil {
+			return fmt.Errorf("parsing local YAML: %w", err)
+		}
 		jsonBytes, _ := json.Marshal(localData)
 
 		if err := deps.Client.UpdateSLO(sloID, jsonBytes); err != nil {
@@ -64,7 +68,9 @@ var pushCmd = &cobra.Command{
 		}
 
 		var rawRemote interface{}
-		json.Unmarshal(snapshotB, &rawRemote)
+		if err := json.Unmarshal(snapshotB, &rawRemote); err != nil {
+			return fmt.Errorf("parsing remote snapshot: %w", err)
+		}
 		snapshotYAML, _ := yaml.Marshal(rawRemote)
 		deps.Store.SaveVersion(sloID, "slo", deps.ConnName, localVersion.Content, string(snapshotYAML), "", "pushed to remote")
 

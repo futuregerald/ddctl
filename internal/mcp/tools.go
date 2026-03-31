@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	mcplib "github.com/mark3labs/mcp-go/mcp"
@@ -370,14 +371,18 @@ func (s *Server) handleDashboardPull(_ context.Context, request mcplib.CallToolR
 
 	// Convert JSON to YAML for storage
 	var raw interface{}
-	json.Unmarshal(content, &raw)
+	if err := json.Unmarshal(content, &raw); err != nil {
+		return errorResult(fmt.Sprintf("parsing dashboard JSON: %v", err)), nil
+	}
 	yamlContent, _ := yaml.Marshal(raw)
 
 	// Extract title
 	var meta struct {
 		Title string `json:"title"`
 	}
-	json.Unmarshal(content, &meta)
+	if err := json.Unmarshal(content, &meta); err != nil {
+		return errorResult(fmt.Sprintf("parsing dashboard metadata: %v", err)), nil
+	}
 
 	if err := s.store.TrackResource(id, "dashboard", conn, meta.Title); err != nil {
 		return errorResult(fmt.Sprintf("tracking resource: %v", err)), nil
@@ -458,7 +463,9 @@ func (s *Server) handleDashboardCreate(_ context.Context, request mcplib.CallToo
 	var meta struct {
 		Title string `yaml:"title"`
 	}
-	yaml.Unmarshal([]byte(yamlContent), &meta)
+	if err := yaml.Unmarshal([]byte(yamlContent), &meta); err != nil {
+		return errorResult(fmt.Sprintf("parsing dashboard metadata: %v", err)), nil
+	}
 
 	if err := s.store.TrackResource(id, "dashboard", conn, meta.Title); err != nil {
 		return errorResult(fmt.Sprintf("tracking resource: %v", err)), nil
@@ -524,7 +531,9 @@ func (s *Server) handleDashboardDiff(_ context.Context, request mcplib.CallToolR
 
 		// Convert remote to YAML for comparison
 		var raw interface{}
-		json.Unmarshal(remoteContent, &raw)
+		if err := json.Unmarshal(remoteContent, &raw); err != nil {
+			return errorResult(fmt.Sprintf("parsing remote dashboard: %v", err)), nil
+		}
 		remoteYAML, _ := yaml.Marshal(raw)
 
 		result := map[string]interface{}{
@@ -710,13 +719,17 @@ func (s *Server) handleMonitorPull(_ context.Context, request mcplib.CallToolReq
 	}
 
 	var raw interface{}
-	json.Unmarshal(content, &raw)
+	if err := json.Unmarshal(content, &raw); err != nil {
+		return errorResult(fmt.Sprintf("parsing monitor JSON: %v", err)), nil
+	}
 	yamlContent, _ := yaml.Marshal(raw)
 
 	var meta struct {
 		Name string `json:"name"`
 	}
-	json.Unmarshal(content, &meta)
+	if err := json.Unmarshal(content, &meta); err != nil {
+		return errorResult(fmt.Sprintf("parsing monitor metadata: %v", err)), nil
+	}
 
 	if err := s.store.TrackResource(idStr, "monitor", conn, meta.Name); err != nil {
 		return errorResult(fmt.Sprintf("tracking resource: %v", err)), nil
@@ -799,7 +812,9 @@ func (s *Server) handleMonitorCreate(_ context.Context, request mcplib.CallToolR
 	var meta struct {
 		Name string `yaml:"name"`
 	}
-	yaml.Unmarshal([]byte(yamlContent), &meta)
+	if err := yaml.Unmarshal([]byte(yamlContent), &meta); err != nil {
+		return errorResult(fmt.Sprintf("parsing monitor metadata: %v", err)), nil
+	}
 
 	if err := s.store.TrackResource(idStr, "monitor", conn, meta.Name); err != nil {
 		return errorResult(fmt.Sprintf("tracking resource: %v", err)), nil
@@ -904,13 +919,17 @@ func (s *Server) handleSLOPull(_ context.Context, request mcplib.CallToolRequest
 	}
 
 	var raw interface{}
-	json.Unmarshal(content, &raw)
+	if err := json.Unmarshal(content, &raw); err != nil {
+		return errorResult(fmt.Sprintf("parsing SLO JSON: %v", err)), nil
+	}
 	yamlContent, _ := yaml.Marshal(raw)
 
 	var meta struct {
 		Name string `json:"name"`
 	}
-	json.Unmarshal(content, &meta)
+	if err := json.Unmarshal(content, &meta); err != nil {
+		return errorResult(fmt.Sprintf("parsing SLO metadata: %v", err)), nil
+	}
 
 	if err := s.store.TrackResource(id, "slo", conn, meta.Name); err != nil {
 		return errorResult(fmt.Sprintf("tracking resource: %v", err)), nil
@@ -988,7 +1007,9 @@ func (s *Server) handleSLOCreate(_ context.Context, request mcplib.CallToolReque
 	var meta struct {
 		Name string `yaml:"name"`
 	}
-	yaml.Unmarshal([]byte(yamlContent), &meta)
+	if err := yaml.Unmarshal([]byte(yamlContent), &meta); err != nil {
+		return errorResult(fmt.Sprintf("parsing SLO metadata: %v", err)), nil
+	}
 
 	if err := s.store.TrackResource(id, "slo", conn, meta.Name); err != nil {
 		return errorResult(fmt.Sprintf("tracking resource: %v", err)), nil
@@ -1098,9 +1119,14 @@ func (s *Server) handleAPICall(_ context.Context, request mcplib.CallToolRequest
 		return errorResult(err.Error()), nil
 	}
 
-	method, err := request.RequireString("method")
+	methodStr, err := request.RequireString("method")
 	if err != nil {
 		return errorResult(err.Error()), nil
+	}
+
+	method := strings.ToUpper(methodStr)
+	if method == "DELETE" && s.safety != SafetyUnrestricted {
+		return errorResult("DELETE operations require unrestricted safety level"), nil
 	}
 
 	path, err := request.RequireString("path")

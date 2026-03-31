@@ -45,7 +45,9 @@ var importCmd = &cobra.Command{
 			ID   int64  `yaml:"id"`
 			Name string `yaml:"name"`
 		}
-		yaml.Unmarshal(data, &meta)
+		if err := yaml.Unmarshal(data, &meta); err != nil {
+			return fmt.Errorf("parsing metadata: %w", err)
+		}
 
 		resourceID := fmt.Sprintf("%d", meta.ID)
 		title := meta.Name

@@ -2,7 +2,6 @@
 package auth
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/futuregerald/ddctl/internal/keyring"
 	"github.com/futuregerald/ddctl/internal/store"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var loginCmd = &cobra.Command{
@@ -25,17 +25,20 @@ var loginCmd = &cobra.Command{
 			connName = cmd.Root().PersistentFlags().Lookup("connection").Value.String()
 		}
 
+		// Open store once for all lookups
+		s, err := store.New(config.DBPath())
+		if err != nil {
+			return fmt.Errorf("opening store: %w", err)
+		}
+		defer s.Close()
+
 		// Resolve connection name
 		if connName == "" {
 			if cfg.DefaultConnection != "" {
 				connName = cfg.DefaultConnection
 			} else {
-				s, err := store.New(config.DBPath())
-				if err == nil {
-					defer s.Close()
-					if dc, err := s.GetDefaultConnection(); err == nil {
-						connName = dc.Name
-					}
+				if dc, err := s.GetDefaultConnection(); err == nil {
+					connName = dc.Name
 				}
 			}
 		}
@@ -44,30 +47,29 @@ var loginCmd = &cobra.Command{
 			return fmt.Errorf("no connection specified. Use --connection or set a default with 'ddctl connection default'")
 		}
 
-		// Get connection from store to know the site
-		s, err := store.New(config.DBPath())
-		if err != nil {
-			return fmt.Errorf("opening store: %w", err)
-		}
-		defer s.Close()
-
 		conn, err := s.GetConnection(connName)
 		if err != nil {
 			return fmt.Errorf("connection %q not found. Run 'ddctl connection add' first", connName)
 		}
 
-		reader := bufio.NewReader(os.Stdin)
-
 		fmt.Fprint(os.Stderr, "API Key: ")
-		apiKey, _ := reader.ReadString('\n')
-		apiKey = strings.TrimSpace(apiKey)
+		apiKeyBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Fprintln(os.Stderr)
+		if err != nil {
+			return fmt.Errorf("reading API key: %w", err)
+		}
+		apiKey := strings.TrimSpace(string(apiKeyBytes))
 		if apiKey == "" {
 			return fmt.Errorf("API key is required")
 		}
 
 		fmt.Fprint(os.Stderr, "App Key: ")
-		appKey, _ := reader.ReadString('\n')
-		appKey = strings.TrimSpace(appKey)
+		appKeyBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Fprintln(os.Stderr)
+		if err != nil {
+			return fmt.Errorf("reading App key: %w", err)
+		}
+		appKey := strings.TrimSpace(string(appKeyBytes))
 		if appKey == "" {
 			return fmt.Errorf("App key is required")
 		}

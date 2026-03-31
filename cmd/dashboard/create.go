@@ -77,14 +77,18 @@ var createCmd = &cobra.Command{
 		}
 
 		var raw interface{}
-		json.Unmarshal(jsonBytes, &raw)
+		if err := json.Unmarshal(jsonBytes, &raw); err != nil {
+			return fmt.Errorf("parsing response: %w", err)
+		}
 		yamlBytes, _ := yaml.Marshal(raw)
 
 		title := createFlagTitle
 		var meta struct {
 			Title string `json:"title"`
 		}
-		json.Unmarshal(jsonBytes, &meta)
+		if err := json.Unmarshal(jsonBytes, &meta); err != nil {
+			return fmt.Errorf("parsing metadata: %w", err)
+		}
 		if meta.Title != "" {
 			title = meta.Title
 		}

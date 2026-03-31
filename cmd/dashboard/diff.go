@@ -53,7 +53,9 @@ var diffCmd = &cobra.Command{
 				return err
 			}
 			var raw interface{}
-			json.Unmarshal(jsonBytes, &raw)
+			if err := json.Unmarshal(jsonBytes, &raw); err != nil {
+				return fmt.Errorf("parsing remote response: %w", err)
+			}
 			yamlBytes, _ := yaml.Marshal(raw)
 			compareContent = string(yamlBytes)
 			compareLabel = "remote"

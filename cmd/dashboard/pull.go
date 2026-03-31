@@ -47,7 +47,9 @@ var pullCmd = &cobra.Command{
 			ModifiedAt *string `json:"modified_at"`
 			AuthorName *string `json:"author_name"`
 		}
-		json.Unmarshal(jsonBytes, &meta)
+		if err := json.Unmarshal(jsonBytes, &meta); err != nil {
+			return fmt.Errorf("parsing metadata: %w", err)
+		}
 
 		// Track resource
 		if err := deps.Store.TrackResource(dashID, "dashboard", deps.ConnName, meta.Title); err != nil {

@@ -45,7 +45,9 @@ var importCmd = &cobra.Command{
 			ID   string `yaml:"id"`
 			Name string `yaml:"name"`
 		}
-		yaml.Unmarshal(data, &meta)
+		if err := yaml.Unmarshal(data, &meta); err != nil {
+			return fmt.Errorf("parsing metadata: %w", err)
+		}
 
 		sloID := meta.ID
 		title := meta.Name

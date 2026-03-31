@@ -83,7 +83,7 @@ func executeRawRequest(deps *cmdutil.Deps, method, path, body string) error {
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 50<<20))
 	if err != nil {
 		return fmt.Errorf("reading response: %w", err)
 	}

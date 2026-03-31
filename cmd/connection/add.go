@@ -12,6 +12,7 @@ import (
 	"github.com/futuregerald/ddctl/internal/keyring"
 	"github.com/futuregerald/ddctl/internal/store"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var (
@@ -46,16 +47,29 @@ var addCmd = &cobra.Command{
 			site = "datadoghq.com"
 		}
 
+		// Validate site looks like a legitimate domain
+		if strings.ContainsAny(site, "/?#@") || strings.Contains(site, "..") {
+			return fmt.Errorf("invalid site %q: must be a domain name like datadoghq.com", site)
+		}
+
 		fmt.Fprint(os.Stderr, "API Key: ")
-		apiKey, _ := reader.ReadString('\n')
-		apiKey = strings.TrimSpace(apiKey)
+		apiKeyBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Fprintln(os.Stderr)
+		if err != nil {
+			return fmt.Errorf("reading API key: %w", err)
+		}
+		apiKey := strings.TrimSpace(string(apiKeyBytes))
 		if apiKey == "" {
 			return fmt.Errorf("API key is required")
 		}
 
 		fmt.Fprint(os.Stderr, "App Key: ")
-		appKey, _ := reader.ReadString('\n')
-		appKey = strings.TrimSpace(appKey)
+		appKeyBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Fprintln(os.Stderr)
+		if err != nil {
+			return fmt.Errorf("reading App key: %w", err)
+		}
+		appKey := strings.TrimSpace(string(appKeyBytes))
 		if appKey == "" {
 			return fmt.Errorf("App key is required")
 		}

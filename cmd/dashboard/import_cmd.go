@@ -49,7 +49,9 @@ var importCmd = &cobra.Command{
 			ID    string `yaml:"id"`
 			Title string `yaml:"title"`
 		}
-		yaml.Unmarshal(data, &meta)
+		if err := yaml.Unmarshal(data, &meta); err != nil {
+			return fmt.Errorf("parsing metadata: %w", err)
+		}
 
 		dashID := meta.ID
 		title := meta.Title

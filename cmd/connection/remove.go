@@ -26,6 +26,13 @@ var removeCmd = &cobra.Command{
 		}
 		defer s.Close()
 
+		// Check if this connection is the default before removing
+		conn, err := s.GetConnection(name)
+		if err != nil {
+			return err
+		}
+		wasDefault := conn.IsDefault
+
 		if err := s.RemoveConnection(name); err != nil {
 			return err
 		}
@@ -34,6 +41,19 @@ var removeCmd = &cobra.Command{
 		keyring.DeleteCredentials(name)
 
 		fmt.Fprintf(os.Stderr, "Connection %q removed.\n", name)
+
+		// If the removed connection was the default, reassign
+		if wasDefault {
+			remaining, err := s.ListConnections()
+			if err == nil && len(remaining) > 0 {
+				if err := s.SetDefaultConnection(remaining[0].Name); err == nil {
+					fmt.Fprintf(os.Stderr, "Default connection reassigned to %q.\n", remaining[0].Name)
+				}
+			} else if err == nil {
+				fmt.Fprintln(os.Stderr, "Warning: no remaining connections. Run 'ddctl connection add' to create one.")
+			}
+		}
+
 		return nil
 	},
 }
