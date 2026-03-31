@@ -1,0 +1,22 @@
+{
+  "name": "ddctl",
+  "version": "0.0.0",
+  "description": "Manage Datadog dashboards, monitors, and SLOs from your terminal. MCP server included.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/futuregerald/ddctl"
+  },
+  "bin": {
+    "ddctl": "bin/ddctl.js"
+  },
+  "files": ["bin/ddctl.js"],
+  "optionalDependencies": {
+    "@ddctl/darwin-arm64": "0.0.0",
+    "@ddctl/darwin-x64": "0.0.0",
+    "@ddctl/linux-arm64": "0.0.0",
+    "@ddctl/linux-x64": "0.0.0",
+    "@ddctl/win32-arm64": "0.0.0",
+    "@ddctl/win32-x64": "0.0.0"
+  }
+}

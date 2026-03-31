@@ -8,8 +8,8 @@ ddctl includes a built-in MCP (Model Context Protocol) server that exposes Datad
 {
   "mcpServers": {
     "ddctl": {
-      "command": "ddctl",
-      "args": ["mcp", "serve"]
+      "command": "npx",
+      "args": ["-y", "ddctl", "mcp", "serve"]
     }
   }
 }
@@ -25,8 +25,8 @@ The `--safety` flag controls which operations LLM agents can perform:
 {
   "mcpServers": {
     "ddctl": {
-      "command": "ddctl",
-      "args": ["mcp", "serve", "--safety", "read-write"]
+      "command": "npx",
+      "args": ["-y", "ddctl", "mcp", "serve", "--safety", "read-write"]
     }
   }
 }
@@ -48,8 +48,8 @@ The safety level is set at server startup and cannot be overridden per tool call
 {
   "mcpServers": {
     "ddctl": {
-      "command": "ddctl",
-      "args": ["mcp", "serve"]
+      "command": "npx",
+      "args": ["-y", "ddctl", "mcp", "serve"]
     }
   }
 }
@@ -63,8 +63,8 @@ Works when `ddctl auth login` was previously run.
 {
   "mcpServers": {
     "ddctl": {
-      "command": "ddctl",
-      "args": ["mcp", "serve", "--connection", "production"]
+      "command": "npx",
+      "args": ["-y", "ddctl", "mcp", "serve", "--connection", "production"]
     }
   }
 }
@@ -76,8 +76,8 @@ Works when `ddctl auth login` was previously run.
 {
   "mcpServers": {
     "ddctl": {
-      "command": "ddctl",
-      "args": ["mcp", "serve"],
+      "command": "npx",
+      "args": ["-y", "ddctl", "mcp", "serve"],
       "env": {
         "DD_API_KEY": "your-api-key",
         "DD_APP_KEY": "your-app-key"

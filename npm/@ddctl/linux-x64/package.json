@@ -1,0 +1,13 @@
+{
+  "name": "@ddctl/linux-x64",
+  "version": "0.0.0",
+  "description": "ddctl binary for Linux x64",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/futuregerald/ddctl"
+  },
+  "os": ["linux"],
+  "cpu": ["x64"],
+  "files": ["bin/ddctl"]
+}
