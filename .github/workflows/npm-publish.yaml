@@ -3,6 +3,11 @@ name: Publish npm packages
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (e.g. v0.9.1)'
+        required: true
 
 permissions:
   contents: read
@@ -25,16 +30,22 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Resolve tag
+        id: tag
+        run: echo "TAG=${{ inputs.tag || github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+
       - name: Get version from tag
         id: version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: echo "VERSION=${TAG#v}" >> "$GITHUB_OUTPUT"
+        env:
+          TAG: ${{ steps.tag.outputs.TAG }}
 
       - name: Download release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dist
-          gh release download "$GITHUB_REF_NAME" --dir dist --repo "$GITHUB_REPOSITORY"
+          gh release download "${{ steps.tag.outputs.TAG }}" --dir dist --repo "$GITHUB_REPOSITORY"
 
       - name: Verify checksums
         run: cd dist && sha256sum -c checksums.txt
