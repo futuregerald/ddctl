@@ -1,0 +1,4 @@
+# Platform binaries are injected by CI, never committed
+@ddctl/*/bin/ddctl
+@ddctl/*/bin/ddctl.exe
+!ddctl/

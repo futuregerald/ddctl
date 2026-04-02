@@ -24,12 +24,16 @@ Manage Datadog dashboards, monitors, and SLOs from your terminal. Version-contro
 ## Install
 
 ```bash
+# npm (recommended for MCP server usage)
+npx ddctl version
+
+# Go
 go install github.com/futuregerald/ddctl@latest
-```
 
-Or build from source:
+# Download binary
+# See https://github.com/futuregerald/ddctl/releases
 
-```bash
+# Build from source
 git clone https://github.com/futuregerald/ddctl.git
 cd ddctl
 make build
@@ -102,8 +106,8 @@ ddctl dashboard history abc-def-123
 {
   "mcpServers": {
     "ddctl": {
-      "command": "ddctl",
-      "args": ["mcp", "serve"]
+      "command": "npx",
+      "args": ["-y", "ddctl", "mcp", "serve"]
     }
   }
 }
@@ -115,8 +119,8 @@ For write operations, set the safety level:
 {
   "mcpServers": {
     "ddctl": {
-      "command": "ddctl",
-      "args": ["mcp", "serve", "--safety", "read-write"]
+      "command": "npx",
+      "args": ["-y", "ddctl", "mcp", "serve", "--safety", "read-write"]
     }
   }
 }
