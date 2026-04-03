@@ -7,6 +7,11 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   goreleaser:
@@ -30,3 +35,92 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  npm-publish:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist
+          gh release download "$GITHUB_REF_NAME" --dir dist --repo "$GITHUB_REPOSITORY"
+
+      - name: Verify checksums
+        run: cd dist && sha256sum -c checksums.txt
+
+      - name: Extract and place binaries
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          declare -A ARCHIVES=(
+            ["darwin-arm64"]="ddctl_${VERSION}_darwin_arm64.tar.gz"
+            ["darwin-x64"]="ddctl_${VERSION}_darwin_amd64.tar.gz"
+            ["linux-arm64"]="ddctl_${VERSION}_linux_arm64.tar.gz"
+            ["linux-x64"]="ddctl_${VERSION}_linux_amd64.tar.gz"
+            ["win32-arm64"]="ddctl_${VERSION}_windows_arm64.zip"
+            ["win32-x64"]="ddctl_${VERSION}_windows_amd64.zip"
+          )
+
+          for platform in "${!ARCHIVES[@]}"; do
+            archive="${ARCHIVES[$platform]}"
+            dest="npm/@ddctl/${platform}/bin"
+            mkdir -p "$dest"
+
+            # GoReleaser produces flat archives (no wrapping directory)
+            mkdir -p /tmp/extract-${platform}
+
+            if [[ "$archive" == *.zip ]]; then
+              unzip -o "dist/$archive" -d /tmp/extract-${platform}
+              cp /tmp/extract-${platform}/ddctl.exe "$dest/"
+            else
+              tar -xzf "dist/$archive" -C /tmp/extract-${platform}
+              cp /tmp/extract-${platform}/ddctl "$dest/"
+            fi
+
+            chmod +x "$dest"/*
+          done
+
+      - name: Stamp versions in all package.json files
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          for pkg in npm/@ddctl/*/package.json npm/ddctl/package.json; do
+            sed -i "s/\"version\": \"0.0.0\"/\"version\": \"${VERSION}\"/" "$pkg"
+            sed -i "s/\"@ddctl\/\([^\"]*\)\": \"0.0.0\"/\"@ddctl\/\1\": \"${VERSION}\"/g" "$pkg"
+          done
+
+      - name: Determine npm tag
+        id: npm-tag
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          if [[ "$VERSION" == *-* ]]; then
+            echo "TAG=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAG=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish platform packages
+        run: |
+          for dir in npm/@ddctl/*/; do
+            echo "Publishing $(basename "$dir")..."
+            npm publish "$dir" --access public --provenance --tag ${{ steps.npm-tag.outputs.TAG }}
+          done
+
+      - name: Publish root package
+        run: npm publish npm/ddctl --access public --provenance --tag ${{ steps.npm-tag.outputs.TAG }}
