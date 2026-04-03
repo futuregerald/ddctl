@@ -123,4 +123,4 @@ jobs:
           done
 
       - name: Publish root package
-        run: npm publish npm/ddctl --access public --provenance --no-git-checks --tag ${{ steps.npm-tag.outputs.TAG }}
+        run: npm publish ./npm/ddctl --access public --provenance --tag ${{ steps.npm-tag.outputs.TAG }}
